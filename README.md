@@ -1,4 +1,4 @@
-# 🧑🐢 사람이 되자 (Stop Tech Neck)
+# 🧑🐢 사람이 되자 bePerson
 
 거북목 방지 프로그램 - **"사람이 되자"**  
 웹캠을 이용하여 사용자의 앉은 자세를 인식하고, 화면과 얼굴의 거리가 가까워지면 경고창을 띄워 올바른 자세를 유지하도록 도와줍니다.  
@@ -61,4 +61,5 @@ venv\Scripts\activate     # Windows
 
 # 라이브러리 설치
 pip install -r requirements.txt
+
 
