@@ -1,32 +1,32 @@
-import face_recognition
 import cv2
 
-# 웹캠 열기 (0은 기본 카메라)
-video_capture = cv2.VideoCapture(0)
+face_cascade = cv2.CascadeClassifier('haarcascade_frontface.xml')
+cam = cv2.VideoCapture(0)
+cam.set(3,400)
+cam.set(4,350)
 
-while True:
-    # 프레임 읽기
-    ret, frame = video_capture.read()
-    if not ret:
-        break
+while(1):
+	ret, frame = cam.read()
+	gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # 사진을 흑백으로 바꿔준다
+	faces = face_cascade.detectMultiScale(gray, 1.3, 5) # 얼굴 구하기 - 필요한 상수
 
-    # BGR(OpenCV) → RGB(face_recognition) 변환
-    rgb_frame = frame[:, :, ::-1]
+	print(len(faces)) #인식된 얼굴 갯수를 출력
 
-    # 얼굴 위치 찾기
-    face_locations = face_recognition.face_locations(rgb_frame)
+	    # 인식된 얼굴에 사각형을 출력한
+	for (x,y,w,h) in faces:
+	    cv2.rectangle(frame,(x,y),(x+w,y+h),(300,300,300),3) # BGR, 선의 두께
+	    for i in range(x, x + w):
+	    	for j in range(y, y + h):
+	    		for k in range(3):
+		    		if(frame[j, i, k] + 50 > 255):
+		    			frame[j, i, k] = 255
+		    		else:
+		    			frame[j, i, k] = frame[j, i, k] + 50
 
-    # 얼굴 영역에 사각형 그리기
-    for top, right, bottom, left in face_locations:
-        cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 3)
+	#화면에 출력한다
+	cv2.imshow('frame', frame)
+	if cv2.waitKey(1) & 0xFF == ord('q'): # q가 입력되면 중지
+		break
 
-    # 화면에 표시
-    cv2.imshow('Face Recognition', frame)
-
-    # q 키를 누르면 종료
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-# 자원 해제
-video_capture.release()
-cv2.destroyAllWindows()
+cam.release()
+cv2.destroyAllWindows() # 창 닫기
