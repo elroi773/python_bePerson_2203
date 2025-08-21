@@ -28,14 +28,16 @@ btn_login_img = ImageTk.PhotoImage(Image.open("./img/login.png"))   # 로그인 
 btn_join_img = ImageTk.PhotoImage(Image.open("./img/join.png"))     # 회원가입 버튼 이미지
 btn_title_img = ImageTk.PhotoImage(Image.open("./img/title.png"))   # 사람이 되자 버튼 이미지
 
-# 버튼 배치 (좌표는 이미지 위치에 맞게 수정하세요)
+# 버튼 배치 (좌표는 이미지 위치에 맞게 수정)
 canvas.create_image(270, 200, image=btn_title_img, anchor="center")
 
+# 버튼 먼저 생성
 login_btn = tk.Button(root, image=btn_login_img, command=open_login, borderwidth=0, highlightthickness=0)
 join_btn = tk.Button(root, image=btn_join_img, command=open_join, borderwidth=0, highlightthickness=0)
 
 # 버튼을 캔버스 위에 배치
-login_window = canvas.create_window(220, 270, anchor="center", window=login_btn)
-join_window = canvas.create_window(320, 270, anchor="center", window=join_btn)
+login_window = canvas.create_window(200, 300, anchor="center", window=login_btn)   # 로그인 버튼 (왼쪽)
+join_window = canvas.create_window(340, 300, anchor="center", window=join_btn)    # 회원가입 버튼 (오른쪽)
+
 
 root.mainloop()
