@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import PhotoImage
 
 root = tk.Tk()
-root.title("로그인 화면")
+root.title("회원가입 화면")
 
 # 배경 이미지 로드
 bg_img = PhotoImage(file="./img/join_page.png")
