@@ -26,15 +26,20 @@ warning_img = cv2.imread("./img/Warning.png")
 root = tk.Tk()
 root.title("Warning")
 root.attributes("-topmost", True)   # 항상 위에
-root.withdraw()                     # 처음에는 숨김
+root.withdraw()                     # 처음엔 숨김
+root.resizable(False, False)
 
-# 풀스크린 크기
+# 창 크기 설정 (예: 400x200)
+win_w, win_h = 400, 200
 screen_w = root.winfo_screenwidth()
 screen_h = root.winfo_screenheight()
+pos_x = (screen_w - win_w) // 2
+pos_y = (screen_h - win_h) // 2
+root.geometry(f"{win_w}x{win_h}+{pos_x}+{pos_y}")
 
-# OpenCV → PIL 변환
+# OpenCV → PIL 변환 (이미지 크기도 창 크기에 맞춤)
 img_rgb = cv2.cvtColor(warning_img, cv2.COLOR_BGR2RGB)
-img_pil = Image.fromarray(img_rgb).resize((screen_w, screen_h))
+img_pil = Image.fromarray(img_rgb).resize((win_w, win_h))
 img_tk = ImageTk.PhotoImage(img_pil)
 
 # Label에 이미지 넣기
@@ -43,7 +48,7 @@ label.pack()
 
 print("실시간 거리 측정 시작 (종료: q)")
 
-showing = False  # 경고창이 보이는지 상태
+showing = False  # 경고창이 보이는 상태 추적
 
 while True:
     ret, frame = cam.read()
@@ -77,7 +82,7 @@ while True:
                 if distance <= 30:
                     show_warning = True
 
-    # Tkinter 창 표시/숨김
+    # 경고창 표시/숨김
     if show_warning and not showing:
         root.deiconify()  # 창 표시
         showing = True
