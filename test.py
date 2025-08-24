@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+import tkinter as tk
+from PIL import Image, ImageTk
 
 # DNN 얼굴 검출 모델 로드
 prototxt = "deploy.prototxt"
@@ -11,7 +13,6 @@ cam = cv2.VideoCapture(0)
 
 # 얼굴 실제 폭 (cm)
 KNOWN_WIDTH = 14.0
-# 기준 거리 (cm)
 KNOWN_DISTANCE = 50.0
 
 # 초점 거리 계산용
@@ -21,9 +22,28 @@ initialized = False
 # 경고 이미지 로드
 warning_img = cv2.imread("./img/Warning.png")
 
+# ===== Tkinter 창 설정 =====
+root = tk.Tk()
+root.title("Warning")
+root.attributes("-topmost", True)   # 항상 위에
+root.withdraw()                     # 처음에는 숨김
+
+# 풀스크린 크기
+screen_w = root.winfo_screenwidth()
+screen_h = root.winfo_screenheight()
+
+# OpenCV → PIL 변환
+img_rgb = cv2.cvtColor(warning_img, cv2.COLOR_BGR2RGB)
+img_pil = Image.fromarray(img_rgb).resize((screen_w, screen_h))
+img_tk = ImageTk.PhotoImage(img_pil)
+
+# Label에 이미지 넣기
+label = tk.Label(root, image=img_tk)
+label.pack()
+
 print("실시간 거리 측정 시작 (종료: q)")
 
-warning_window_open = False  # 창이 열렸는지 추적하는 변수
+showing = False  # 경고창이 보이는지 상태
 
 while True:
     ret, frame = cam.read()
@@ -57,20 +77,19 @@ while True:
                 if distance <= 30:
                     show_warning = True
 
-    if show_warning:
-        scale = 0.5
-        new_w = 400
-        new_h = int(warning_img.shape[0] * new_w / warning_img.shape[1])
-        resized_warning = cv2.resize(warning_img, (new_w, new_h))
-        cv2.imshow("Warning", resized_warning)
-        warning_window_open = True
-    else:
-        if warning_window_open:
-            cv2.destroyWindow("Warning")
-            warning_window_open = False
+    # Tkinter 창 표시/숨김
+    if show_warning and not showing:
+        root.deiconify()  # 창 표시
+        showing = True
+    elif not show_warning and showing:
+        root.withdraw()   # 창 숨김
+        showing = False
+
+    root.update()  # Tkinter 창 새로고침
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
 cam.release()
 cv2.destroyAllWindows()
+root.destroy()
