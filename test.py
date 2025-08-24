@@ -54,7 +54,7 @@ while True:
                 cv2.putText(frame, f"{distance:.2f}cm", (startX, startY - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
-                # 15cm 이하이면 경고
+                # 30cm 이하이면 경고
                 if distance <= 30:
                     show_warning = True
 
