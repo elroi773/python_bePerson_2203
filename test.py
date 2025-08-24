@@ -23,6 +23,8 @@ warning_img = cv2.imread("./img/Warning.png")
 
 print("실시간 거리 측정 시작 (종료: q)")
 
+warning_window_open = False  # 창이 열렸는지 추적하는 변수
+
 while True:
     ret, frame = cam.read()
     if not ret:
@@ -34,7 +36,7 @@ while True:
     net.setInput(blob)
     detections = net.forward()
 
-    show_warning = False  # 경고 표시 여부
+    show_warning = False
 
     for i in range(detections.shape[2]):
         confidence = detections[0, 0, i, 2]
@@ -48,38 +50,25 @@ while True:
                 initialized = True
                 print("초점 거리 계산 완료:", focal_length)
 
-            # 거리 계산
             if focal_length is not None and face_width > 0:
                 distance = (KNOWN_WIDTH * focal_length) / face_width
-                cv2.putText(frame, f"{distance:.2f}cm", (startX, startY - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                print(f"현재 거리: {distance:.2f}cm")
 
-                # 30cm 이하이면 경고
                 if distance <= 30:
                     show_warning = True
 
-            cv2.rectangle(frame, (startX, startY), (endX, endY), (0, 255, 0), 2)
-
-    # 경고 이미지 표시
     if show_warning:
-        # 프레임 크기
-        fh, fw = frame.shape[:2]
-
-        # 경고 이미지 크기 조정 (예: 프레임 너비의 50%)
         scale = 0.5
-        new_w = int(fw * scale)
+        new_w = 400
         new_h = int(warning_img.shape[0] * new_w / warning_img.shape[1])
         resized_warning = cv2.resize(warning_img, (new_w, new_h))
+        cv2.imshow("Warning", resized_warning)
+        warning_window_open = True
+    else:
+        if warning_window_open:
+            cv2.destroyWindow("Warning")
+            warning_window_open = False
 
-        # 중앙 위치 계산
-        x_offset = (fw - new_w) // 2
-        y_offset = (fh - new_h) // 2
-
-        # 프레임에 삽입
-        frame[y_offset:y_offset+new_h, x_offset:x_offset+new_w] = resized_warning
-
-
-    cv2.imshow("Distance Measurement", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
