@@ -23,6 +23,7 @@ face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_fronta
 # 전역 변수
 captured_frame = None
 detected_faces = []
+detected_neck_length = 0  # 목 길이 저장
 
 # Tkinter에 영상 표시용 라벨
 video_label = tk.Label(root)
@@ -34,7 +35,7 @@ cam.set(3, 400)
 cam.set(4, 350)
 
 def update_frame():
-    global captured_frame, detected_faces
+    global captured_frame, detected_faces, detected_neck_length
 
     ret, frame = cam.read()
     if not ret:
@@ -53,9 +54,21 @@ def update_frame():
     detected_faces = faces
 
     for (x, y, w, h) in faces:
-        extended_h = int(h * 1.3)
-        y_end = min(y + extended_h, frame.shape[0])
-        cv2.rectangle(frame, (x, y), (x + w, y_end), (0, 255, 0), 3)
+        # 얼굴 박스
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 3)
+
+        # 목 길이 추정 (얼굴 높이의 0.35배 정도)
+        neck_length = int(h * 0.35)
+        detected_neck_length = neck_length
+
+        # 목 영역 박스 (얼굴 아래)
+        y_neck_start = y + h
+        y_neck_end = min(y + h + neck_length, frame.shape[0])
+        cv2.rectangle(frame, (x, y_neck_start), (x + w, y_neck_end), (255, 0, 0), 2)
+
+        # 목 길이 텍스트 출력
+        cv2.putText(frame, f"Neck: {neck_length}px", (x, y_neck_end + 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
 
     captured_frame = frame.copy()
 
@@ -70,14 +83,16 @@ def update_frame():
     root.after(10, update_frame)
 
 def take_photo(userid="testuser"):
-    global captured_frame, detected_faces
+    global captured_frame, detected_faces, detected_neck_length
 
     if captured_frame is None or len(detected_faces) == 0:
         print("⚠ 얼굴이 인식되지 않았습니다.")
         return
 
     (x, y, w, h) = detected_faces[0]
-    extended_h = int(h * 1.3)
+    neck_length = detected_neck_length
+
+    extended_h = h + neck_length
     y_end = min(y + extended_h, captured_frame.shape[0])
 
     roi = captured_frame[y:y_end, x:x+w]
@@ -86,20 +101,21 @@ def take_photo(userid="testuser"):
     os.makedirs("./photos", exist_ok=True)
     photo_path = f"./photos/{userid}_photo.jpg"
     cv2.imwrite(photo_path, cv2.cvtColor(roi, cv2.COLOR_RGB2BGR))
-    print(f"📸 사진 저장 완료: {photo_path}")
+    print(f"📸 사진 저장 완료: {photo_path} (목 길이: {neck_length}px)")
 
-    save_photo_to_db(userid, photo_path)
+    save_photo_to_db(userid, photo_path, neck_length)
 
-def save_photo_to_db(userid, photo_path):
+def save_photo_to_db(userid, photo_path, neck_length):
     try:
         conn = connect_db()
         cursor = conn.cursor()
 
+        # photo_url 저장 + 목 길이도 저장할 수 있도록 users 테이블 수정 필요
         sql = "UPDATE users SET photo_url = %s WHERE userid = %s"
         cursor.execute(sql, (photo_path, userid))
         conn.commit()
 
-        print("✅ DB 업데이트 완료")
+        print(f"✅ DB 업데이트 완료 (userid={userid}, 목 길이={neck_length}px)")
     except Exception as e:
         print("DB 오류:", e)
     finally:
