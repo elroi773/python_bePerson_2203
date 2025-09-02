@@ -25,9 +25,13 @@ captured_frame = None
 detected_faces = []
 detected_neck_length = 0  # 목 길이 저장
 
+# 프레임을 담을 Frame (중앙 정렬)
+frame_container = tk.Frame(root, bg="white")
+frame_container.place(relx=0.5, rely=0.4, anchor="center")
+
 # Tkinter에 영상 표시용 라벨
-video_label = tk.Label(root)
-video_label.place(x=100, y=50)
+video_label = tk.Label(frame_container, bg="black")
+video_label.pack()
 
 # 웹캠 객체
 cam = cv2.VideoCapture(0)
@@ -57,24 +61,30 @@ def update_frame():
         # 얼굴 박스
         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 3)
 
-        # 목 길이 추정 (얼굴 높이의 0.35배 정도)
+        # 목 길이 추정
         neck_length = int(h * 0.35)
         detected_neck_length = neck_length
 
-        # 목 영역 박스 (얼굴 아래)
+        # 목 영역 박스
         y_neck_start = y + h
         y_neck_end = min(y + h + neck_length, frame.shape[0])
         cv2.rectangle(frame, (x, y_neck_start), (x + w, y_neck_end), (255, 0, 0), 2)
 
-        # 목 길이 텍스트 출력
+        # 목 길이 텍스트
         cv2.putText(frame, f"Neck: {neck_length}px", (x, y_neck_end + 20),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
 
     captured_frame = frame.copy()
 
-    # OpenCV -> PIL -> Tkinter 변환
+    # OpenCV -> PIL 변환
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     img = Image.fromarray(rgb)
+
+    # 👉 크기를 80%로 축소
+    new_w = int(img.width * 0.8)
+    new_h = int(img.height * 0.8)
+    img = img.resize((new_w, new_h))
+
     imgtk = ImageTk.PhotoImage(image=img)
 
     video_label.imgtk = imgtk
@@ -110,7 +120,6 @@ def save_photo_to_db(userid, photo_path, neck_length):
         conn = connect_db()
         cursor = conn.cursor()
 
-        # photo_url + neck_length 업데이트
         sql = "UPDATE users SET photo_url = %s, neck_length = %s WHERE userid = %s"
         cursor.execute(sql, (photo_path, neck_length, userid))
         conn.commit()
@@ -122,11 +131,11 @@ def save_photo_to_db(userid, photo_path, neck_length):
         if conn:
             conn.close()
 
-# 버튼 추가
+# 버튼 추가 (화면 아래 중앙)
 btn = tk.Button(root, text="사진 촬영", font=custom_font, command=lambda: take_photo("testuser"))
-btn.place(x=200, y=400)
+btn.place(relx=0.5, rely=0.9, anchor="center")
 
-# 주기적으로 프레임 업데이트
+# 프레임 업데이트 시작
 update_frame()
 
 root.mainloop()
