@@ -110,9 +110,9 @@ def save_photo_to_db(userid, photo_path, neck_length):
         conn = connect_db()
         cursor = conn.cursor()
 
-        # photo_url 저장 + 목 길이도 저장할 수 있도록 users 테이블 수정 필요
-        sql = "UPDATE users SET photo_url = %s WHERE userid = %s"
-        cursor.execute(sql, (photo_path, userid))
+        # photo_url + neck_length 업데이트
+        sql = "UPDATE users SET photo_url = %s, neck_length = %s WHERE userid = %s"
+        cursor.execute(sql, (photo_path, neck_length, userid))
         conn.commit()
 
         print(f"✅ DB 업데이트 완료 (userid={userid}, 목 길이={neck_length}px)")
