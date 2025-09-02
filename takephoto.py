@@ -46,11 +46,6 @@ def update_frame():
         root.after(10, update_frame)
         return
 
-    # 👉 프레임을 아래로 20px 이동
-    shift_y = 100
-    frame = frame[shift_y:, :]   # 위에서 20px 잘라내기
-    frame = cv2.copyMakeBorder(frame, shift_y, 0, 0, 0, cv2.BORDER_CONSTANT, value=(0,0,0))
-
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     gray = cv2.equalizeHist(gray)
 
@@ -96,7 +91,6 @@ def update_frame():
     video_label.configure(image=imgtk)
 
     root.after(10, update_frame)
-
 
 def take_photo(userid="testuser"):
     global captured_frame, detected_faces, detected_neck_length
