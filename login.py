@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import PhotoImage
 from tkinter import font as tkFont
+import pymysql
 
 root = tk.Tk()
 root.title("로그인 화면")
@@ -11,8 +12,8 @@ canvas = tk.Canvas(root, width=bg_img.width(), height=bg_img.height(), highlight
 canvas.pack()
 canvas.create_image(0, 0, anchor="nw", image=bg_img)
 
-# ==== 설치된 폰트 불러오기 ====
-custom_font = tkFont.Font(family="./DungGeunMo.ttf", size=14)
+# ==== 설치된 폰트 불러오기 (경로 ❌, 이름 ⭕) ====
+custom_font = tkFont.Font(family="DungGeunMo", size=14)
 
 # 입력값 저장 변수
 id_var = tk.StringVar()
@@ -64,8 +65,40 @@ add_placeholder(pw_entry, "비밀번호", is_password=True)
 submit_img = PhotoImage(file="./img/submit.png")
 
 def submit_action():
-    print("아이디:", id_var.get())
-    print("비밀번호:", pw_var.get())
+    userid = id_var.get()
+    userpassword = pw_var.get()
+
+    try:
+        # DB 연결
+        conn = pymysql.connect(
+            host="localhost",     # DB 주소
+            user="root",          # DB 유저명
+            passwd="Mysql4344!",  # DB 비밀번호 (← 실제 비번 넣기)
+            database="bePerson",   # DB 이름 (← 실제 DB 이름 넣기)
+            charset="utf8mb4"
+        )
+        cursor = conn.cursor()
+
+        # 로그인 확인
+        sql = "SELECT * FROM USERS WHERE userid = %s AND userpassword = %s"
+        cursor.execute(sql, (userid, userpassword))
+        result = cursor.fetchone()
+
+        if result:
+            print("로그인 성공:", result)
+            success_label = tk.Label(root, text="로그인 성공!", fg="green", font=custom_font, bg="#ffffff")
+            success_label.place(x=200, y=280)
+        else:
+            print("로그인 실패")
+            fail_label = tk.Label(root, text="아이디 또는 비밀번호 오류", fg="red", font=custom_font, bg="#ffffff")
+            fail_label.place(x=180, y=280)
+
+        conn.close()
+
+    except Exception as e:
+        print("DB 연결 오류:", e)
+        error_label = tk.Label(root, text="DB 연결 실패", fg="red", font=custom_font, bg="#ffffff")
+        error_label.place(x=200, y=280)
 
 submit_btn = tk.Button(root, image=submit_img, command=submit_action,
                        bd=0, highlightthickness=0, relief="flat", cursor="hand2")
