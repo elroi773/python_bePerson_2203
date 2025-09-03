@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import PhotoImage
 from tkinter import font as tkFont
 import pymysql
+import subprocess  # ✅ 추가
 
 root = tk.Tk()
 root.title("로그인 화면")
@@ -71,10 +72,10 @@ def submit_action():
     try:
         # DB 연결
         conn = pymysql.connect(
-            host="localhost",     # DB 주소
-            user="root",          # DB 유저명
-            passwd="Mysql4344!",  # DB 비밀번호 (← 실제 비번 넣기)
-            database="bePerson",   # DB 이름 (← 실제 DB 이름 넣기)
+            host="localhost",
+            user="root",
+            passwd="Mysql4344!",  # DB 비밀번호
+            database="bePerson",
             charset="utf8mb4"
         )
         cursor = conn.cursor()
@@ -88,6 +89,11 @@ def submit_action():
             print("로그인 성공:", result)
             success_label = tk.Label(root, text="로그인 성공!", fg="green", font=custom_font, bg="#ffffff")
             success_label.place(x=200, y=280)
+
+            # ✅ test.py 실행
+            root.destroy()  # 로그인 창 닫기
+            subprocess.Popen(["python", "test.py"])
+
         else:
             print("로그인 실패")
             fail_label = tk.Label(root, text="아이디 또는 비밀번호 오류", fg="red", font=custom_font, bg="#ffffff")
