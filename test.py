@@ -29,8 +29,8 @@ root.attributes("-topmost", True)   # 항상 위에
 root.withdraw()                     # 처음엔 숨김
 root.resizable(False, False)
 
-# 창 크기 설정 (예: 400x200)
-win_w, win_h = 400, 200
+# 창 크기 설정 (예: 400x250 → 버튼 공간 확보)
+win_w, win_h = 400, 250
 screen_w = root.winfo_screenwidth()
 screen_h = root.winfo_screenheight()
 pos_x = (screen_w - win_w) // 2
@@ -39,16 +39,26 @@ root.geometry(f"{win_w}x{win_h}+{pos_x}+{pos_y}")
 
 # OpenCV → PIL 변환 (이미지 크기도 창 크기에 맞춤)
 img_rgb = cv2.cvtColor(warning_img, cv2.COLOR_BGR2RGB)
-img_pil = Image.fromarray(img_rgb).resize((win_w, win_h))
+img_pil = Image.fromarray(img_rgb).resize((win_w, win_h - 50))  # 버튼 영역 확보
 img_tk = ImageTk.PhotoImage(img_pil)
 
 # Label에 이미지 넣기
 label = tk.Label(root, image=img_tk)
 label.pack()
 
+# 확인 버튼 추가
+def close_warning():
+    root.withdraw()
+
+btn = tk.Button(root, text="확인", command=close_warning, font=("Arial", 14))
+btn.pack(pady=5)
+
 print("실시간 거리 측정 시작 (종료: q)")
 
 showing = False  # 경고창이 보이는 상태 추적
+
+# 목 길이 기준값 (픽셀 단위) → 필요시 보정
+NECK_THRESHOLD = 100  
 
 while True:
     ret, frame = cam.read()
@@ -69,6 +79,7 @@ while True:
             box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
             (startX, startY, endX, endY) = box.astype("int")
             face_width = endX - startX
+            face_height = endY - startY  # 목 길이 참고
 
             if not initialized and face_width > 0:
                 focal_length = (face_width * KNOWN_DISTANCE) / KNOWN_WIDTH
@@ -77,9 +88,14 @@ while True:
 
             if focal_length is not None and face_width > 0:
                 distance = (KNOWN_WIDTH * focal_length) / face_width
-                print(f"현재 거리: {distance:.2f}cm")
+                print(f"현재 거리: {distance:.2f}cm / 얼굴 높이: {face_height}px")
 
+                # 조건 1: 너무 가까움
                 if distance <= 30:
+                    show_warning = True
+
+                # 조건 2: 목 길이 짧아짐 (고개 숙임)
+                if face_height <= NECK_THRESHOLD:
                     show_warning = True
 
     # 경고창 표시/숨김
