@@ -3,15 +3,15 @@ import numpy as np
 import tkinter as tk
 from PIL import Image, ImageTk
 import pymysql
-from datetime import datetime
+from datetime import datetime, timedelta
+import time
 
 # ===================== DB 설정 =====================
 DB_HOST = "localhost"
 DB_USER = "root"
-DB_PASS = "Mysql4344!"  # MySQL 비밀번호
+DB_PASS = "Mysql4344!"
 DB_NAME = "bePerson"
-
-USER_ID = 1  # 예시: 사유를 입력하는 사용자 ID, 실제 로그인 시 값 받아오기
+USER_ID = 1  # 예시: 사유를 입력하는 사용자 ID
 
 # ===================== 얼굴 검출 모델 =====================
 prototxt = "deploy.prototxt"
@@ -21,7 +21,7 @@ net = cv2.dnn.readNetFromCaffe(prototxt, model)
 # ===================== 웹캠 =====================
 cam = cv2.VideoCapture(0)
 
-# 얼굴 실제 폭 (cm) / 거리 계산용
+# 얼굴 실제 폭 / 거리 계산용
 KNOWN_WIDTH = 14.0
 KNOWN_DISTANCE = 50.0
 focal_length = None
@@ -33,8 +33,8 @@ warning_img = cv2.imread("./img/Warning.png")
 # ===================== Tkinter 창 =====================
 root = tk.Tk()
 root.title("Warning")
-root.attributes("-topmost", True)   # 항상 위
-root.withdraw()                     # 처음엔 숨김
+root.attributes("-topmost", True)
+root.withdraw()
 root.resizable(False, False)
 
 win_w, win_h = 400, 250
@@ -52,10 +52,13 @@ label = tk.Label(root, image=img_tk)
 label.pack()
 
 # ===================== 버튼 기능 =====================
+pause_until = None  # 사유 입력 후 10분 일시정지
+
 def close_warning():
     root.withdraw()
 
 def reason_warning():
+    global pause_until
     reason_win = tk.Toplevel(root)
     reason_win.title("사유 입력")
     reason_win.geometry("300x150")
@@ -66,6 +69,7 @@ def reason_warning():
     tk.Entry(reason_win, textvariable=reason_var, width=30, font=("Arial", 12)).pack(pady=5)
 
     def submit_reason():
+        global pause_until
         reason_text = reason_var.get()
         if reason_text.strip():
             try:
@@ -79,6 +83,9 @@ def reason_warning():
                 conn.commit()
                 conn.close()
                 print("사유 DB 저장 완료:", reason_text)
+
+                # 10분 일시정지
+                pause_until = datetime.now() + timedelta(minutes=10)
             except Exception as e:
                 print("DB 오류:", e)
         reason_win.destroy()
@@ -93,16 +100,17 @@ btn_ok.pack(side="left", padx=10)
 btn_reason = tk.Button(btn_frame, text="사유", command=reason_warning, font=("Arial", 14))
 btn_reason.pack(side="left", padx=10)
 
-# ===================== 얼굴/목 길이 기준 =====================
+# ===================== 얼굴/목 기준 =====================
 NECK_THRESHOLD = 100
 showing = False
 
-print("실시간 거리 측정 시작 (종료: q)")
+def process_frame():
+    global initialized, focal_length, showing
 
-while True:
     ret, frame = cam.read()
     if not ret:
-        break
+        root.after(10, process_frame)
+        return
 
     h, w = frame.shape[:2]
     blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)), 1.0, (300, 300),
@@ -111,8 +119,12 @@ while True:
     detections = net.forward()
 
     show_warning = False
+    paused = pause_until is not None and datetime.now() < pause_until
 
     for i in range(detections.shape[2]):
+        if paused:
+            break  # 일시정지 중이면 경고 판단 생략
+
         confidence = detections[0, 0, i, 2]
         if confidence > 0.7:
             box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
@@ -123,29 +135,28 @@ while True:
             if not initialized and face_width > 0:
                 focal_length = (face_width * KNOWN_DISTANCE) / KNOWN_WIDTH
                 initialized = True
-                print("초점 거리 계산 완료:", focal_length)
 
             if focal_length is not None and face_width > 0:
                 distance = (KNOWN_WIDTH * focal_length) / face_width
                 print(f"현재 거리: {distance:.2f}cm / 얼굴 높이: {face_height}px")
 
-                # 거리/목 길이 조건
                 if distance <= 30 or face_height <= NECK_THRESHOLD:
                     show_warning = True
 
-    # 경고창 표시/숨김
-    if show_warning and not showing:
-        root.deiconify()
-        showing = True
-    elif not show_warning and showing:
+    if not paused:
+        if show_warning and not showing:
+            root.deiconify()
+            showing = True
+        elif not show_warning and showing:
+            root.withdraw()
+            showing = False
+    else:
         root.withdraw()
-        showing = False
 
-    root.update()
+    root.after(30, process_frame)  # 30ms 후 재호출
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
+# ===================== 시작 =====================
+root.after(0, process_frame)
+root.mainloop()
 cam.release()
 cv2.destroyAllWindows()
-root.destroy()
