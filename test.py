@@ -4,13 +4,15 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import pymysql
 from datetime import datetime, timedelta
+import threading
+import keyboard
 
 # ===================== DB 설정 =====================
 DB_HOST = "localhost"
 DB_USER = "root"
 DB_PASS = "Mysql4344!"
 DB_NAME = "bePerson"
-USER_ID = 1  # 예시: 사유를 입력하는 사용자 ID
+USER_ID = 1  # 예시 사용자 ID
 
 # ===================== 얼굴 검출 모델 =====================
 prototxt = "deploy.prototxt"
@@ -81,12 +83,11 @@ def reason_warning():
                 cursor.execute(sql, (USER_ID, reason_text, datetime.now()))
                 conn.commit()
                 conn.close()
-                print("사유 DB 저장 완료:", reason_text)
-
+                print("✅ 사유 DB 저장 완료:", reason_text)
                 # 10분 일시정지
                 pause_until = datetime.now() + timedelta(minutes=10)
             except Exception as e:
-                print("DB 오류:", e)
+                print("❌ DB 오류:", e)
         reason_win.destroy()
 
     tk.Button(reason_win, text="제출", command=submit_reason, font=("Arial", 12)).pack(pady=10)
@@ -106,13 +107,6 @@ last_show_time = None  # 마지막 알림창 표시 시각
 
 start_time = datetime.now()
 final_score = 100  # 시작 점수
-
-# ===================== F1 키 종료 바인딩 =====================
-def f1_pressed(event):
-    end_program()
-
-root.bind("<F1>", f1_pressed)  # F1 키 누르면 f1_pressed 호출
-
 
 # ===================== 프로그램 종료 처리 =====================
 def end_program():
@@ -136,10 +130,10 @@ def end_program():
         )
         cursor = conn.cursor()
         sql = """
-            INSERT INTO records (user_id, score, start_time, end_time, total_time, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO records (user_id, score, start_time, end_time, created_at)
+            VALUES (%s, %s, %s, %s, %s)
         """
-        cursor.execute(sql, (USER_ID, final_score, start_time, end_time, total_time_str, datetime.now()))
+        cursor.execute(sql, (USER_ID, final_score, start_time, end_time, datetime.now()))
         conn.commit()
         conn.close()
         print("✅ DB 저장 완료")
@@ -150,6 +144,15 @@ def end_program():
     cv2.destroyAllWindows()
     root.destroy()
 
+# 별도 스레드에서 단축키 감지
+def listen_hotkey():
+    # Ctrl + Shift + E 단축키 등록
+    keyboard.add_hotkey('ctrl+shift+e', end_program)
+    # 스레드가 살아있도록 대기
+    keyboard.wait()
+
+# 스레드 시작
+threading.Thread(target=listen_hotkey, daemon=True).start()
 
 # ===================== 얼굴/목 기준 =====================
 def process_frame():
@@ -202,9 +205,8 @@ def process_frame():
         if show_warning and not showing:
             root.deiconify()
             showing = True
-            last_show_time = now  # 알림창 띄운 시각 기록
+            last_show_time = now
         elif not show_warning and showing:
-            # 알림창 띄운지 5초 이상 지나야 닫힘
             if last_show_time and (now - last_show_time).total_seconds() >= 5:
                 root.withdraw()
                 showing = False
@@ -212,9 +214,8 @@ def process_frame():
         root.withdraw()
         showing = False
 
-    root.after(30, process_frame)  # 30ms 후 재호출
+    root.after(30, process_frame)
 
 # ===================== 시작 =====================
 root.after(0, process_frame)
-root.protocol("WM_DELETE_WINDOW", end_program)  # 창 닫을 때 end_program 실행
 root.mainloop()
