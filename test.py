@@ -107,13 +107,26 @@ last_show_time = None  # 마지막 알림창 표시 시각
 start_time = datetime.now()
 final_score = 100  # 시작 점수
 
+# ===================== F1 키 종료 바인딩 =====================
+def f1_pressed(event):
+    end_program()
+
+root.bind("<F1>", f1_pressed)  # F1 키 누르면 f1_pressed 호출
+
+
 # ===================== 프로그램 종료 처리 =====================
 def end_program():
     global final_score, start_time
     end_time = datetime.now()
     total_time = end_time - start_time
 
-    print(f"프로그램 실행 시간: {total_time}")
+    # 실행 시간을 H:M:S 형식 문자열로 변환
+    hours, remainder = divmod(total_time.total_seconds(), 3600)
+    minutes, seconds = divmod(remainder, 60)
+    total_time_str = f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}"
+
+    print(f"\n===== 프로그램 종료 =====")
+    print(f"프로그램 실행 시간: {total_time_str}")
     print(f"최종 점수: {final_score}")
 
     try:
@@ -123,19 +136,20 @@ def end_program():
         )
         cursor = conn.cursor()
         sql = """
-            INSERT INTO records (user_id, score, start_time, end_time, created_at)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO records (user_id, score, start_time, end_time, total_time, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """
-        cursor.execute(sql, (USER_ID, final_score, start_time, end_time, datetime.now()))
+        cursor.execute(sql, (USER_ID, final_score, start_time, end_time, total_time_str, datetime.now()))
         conn.commit()
         conn.close()
-        print("DB 저장 완료")
+        print("✅ DB 저장 완료")
     except Exception as e:
-        print("DB 오류:", e)
+        print("❌ DB 오류:", e)
 
     cam.release()
     cv2.destroyAllWindows()
     root.destroy()
+
 
 # ===================== 얼굴/목 기준 =====================
 def process_frame():
