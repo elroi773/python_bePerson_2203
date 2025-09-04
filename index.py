@@ -19,9 +19,11 @@ canvas.create_image(0, 0, image=bg_photo, anchor="nw")
 # 버튼 클릭 시 실행 함수
 def open_login():
     subprocess.Popen(["python", "login.py"])
+    root.destroy()
 
 def open_join():
     subprocess.Popen(["python", "join.py"])
+    root.destroy()
 
 # 버튼 이미지 불러오기
 btn_login_img = ImageTk.PhotoImage(Image.open("./img/login.png"))   # 로그인 버튼 이미지
