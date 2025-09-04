@@ -99,13 +99,47 @@ btn_ok.pack(side="left", padx=10)
 btn_reason = tk.Button(btn_frame, text="사유", command=reason_warning, font=("Arial", 14))
 btn_reason.pack(side="left", padx=10)
 
-# ===================== 얼굴/목 기준 =====================
+# ===================== 프로그램 상태 =====================
 NECK_THRESHOLD = 100
 showing = False
 last_show_time = None  # 마지막 알림창 표시 시각
 
+start_time = datetime.now()
+final_score = 100  # 시작 점수
+
+# ===================== 프로그램 종료 처리 =====================
+def end_program():
+    global final_score, start_time
+    end_time = datetime.now()
+    total_time = end_time - start_time
+
+    print(f"프로그램 실행 시간: {total_time}")
+    print(f"최종 점수: {final_score}")
+
+    try:
+        conn = pymysql.connect(
+            host=DB_HOST, user=DB_USER, passwd=DB_PASS,
+            database=DB_NAME, charset="utf8mb4"
+        )
+        cursor = conn.cursor()
+        sql = """
+            INSERT INTO records (user_id, score, start_time, end_time, created_at)
+            VALUES (%s, %s, %s, %s, %s)
+        """
+        cursor.execute(sql, (USER_ID, final_score, start_time, end_time, datetime.now()))
+        conn.commit()
+        conn.close()
+        print("DB 저장 완료")
+    except Exception as e:
+        print("DB 오류:", e)
+
+    cam.release()
+    cv2.destroyAllWindows()
+    root.destroy()
+
+# ===================== 얼굴/목 기준 =====================
 def process_frame():
-    global initialized, focal_length, showing, last_show_time
+    global initialized, focal_length, showing, last_show_time, final_score
 
     ret, frame = cam.read()
     if not ret:
@@ -141,6 +175,12 @@ def process_frame():
                 print(f"현재 거리: {distance:.2f}cm / 얼굴 높이: {face_height}px")
 
                 if distance <= 30 or face_height <= NECK_THRESHOLD:
+                    # 점수 차감 (새 경고 발생 시점)
+                    if not showing:
+                        final_score -= 5
+                        if final_score < 0:
+                            final_score = 0
+                        print(f"⚠️ 점수 차감! 현재 점수: {final_score}")
                     show_warning = True
 
     now = datetime.now()
@@ -162,6 +202,5 @@ def process_frame():
 
 # ===================== 시작 =====================
 root.after(0, process_frame)
+root.protocol("WM_DELETE_WINDOW", end_program)  # 창 닫을 때 end_program 실행
 root.mainloop()
-cam.release()
-cv2.destroyAllWindows()
