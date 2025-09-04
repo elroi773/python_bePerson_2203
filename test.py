@@ -4,7 +4,6 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import pymysql
 from datetime import datetime, timedelta
-import time
 
 # ===================== DB 설정 =====================
 DB_HOST = "localhost"
@@ -103,9 +102,10 @@ btn_reason.pack(side="left", padx=10)
 # ===================== 얼굴/목 기준 =====================
 NECK_THRESHOLD = 100
 showing = False
+last_show_time = None  # 마지막 알림창 표시 시각
 
 def process_frame():
-    global initialized, focal_length, showing
+    global initialized, focal_length, showing, last_show_time
 
     ret, frame = cam.read()
     if not ret:
@@ -143,15 +143,20 @@ def process_frame():
                 if distance <= 30 or face_height <= NECK_THRESHOLD:
                     show_warning = True
 
+    now = datetime.now()
     if not paused:
         if show_warning and not showing:
             root.deiconify()
             showing = True
+            last_show_time = now  # 알림창 띄운 시각 기록
         elif not show_warning and showing:
-            root.withdraw()
-            showing = False
+            # 알림창 띄운지 5초 이상 지나야 닫힘
+            if last_show_time and (now - last_show_time).total_seconds() >= 5:
+                root.withdraw()
+                showing = False
     else:
         root.withdraw()
+        showing = False
 
     root.after(30, process_frame)  # 30ms 후 재호출
 
