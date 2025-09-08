@@ -216,6 +216,37 @@ def process_frame():
 
     root.after(30, process_frame)
 
-# ===================== 시작 =====================
-root.after(0, process_frame)
+# ===================== 시작 알림 (notice.png) =====================
+def show_notice():
+    notice_win = tk.Toplevel(root)
+    notice_win.title("Notice")
+    notice_win.geometry("400x250")
+    notice_win.resizable(False, False)
+
+    # 화면 중앙 배치
+    screen_w = root.winfo_screenwidth()
+    screen_h = root.winfo_screenheight()
+    pos_x = (screen_w - 400) // 2
+    pos_y = (screen_h - 250) // 2
+    notice_win.geometry(f"400x250+{pos_x}+{pos_y}")
+
+    # 이미지 불러오기
+    notice_img = cv2.imread("./img/notice.png")
+    img_rgb = cv2.cvtColor(notice_img, cv2.COLOR_BGR2RGB)
+    img_pil = Image.fromarray(img_rgb).resize((400, 250))
+    img_tk = ImageTk.PhotoImage(img_pil)
+
+    label = tk.Label(notice_win, image=img_tk)
+    label.image = img_tk  # 가비지 컬렉션 방지
+    label.pack()
+
+    # 3초 후 창 닫고 process_frame 시작
+    def close_and_start():
+        notice_win.destroy()
+        root.after(0, process_frame)
+
+    notice_win.after(3000, close_and_start)
+
+# ===================== 실행 =====================
+show_notice()
 root.mainloop()
