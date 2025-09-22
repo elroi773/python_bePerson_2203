@@ -1,44 +1,57 @@
 import tkinter as tk
 from PIL import Image, ImageTk
 import subprocess
+import sys
 
-# 창 생성
+# 인자 받기
+if len(sys.argv) > 2:
+    logged_in_id = int(sys.argv[1])   # USERS.id (PK)
+    logged_in_user = sys.argv[2]      # userid
+else:
+    logged_in_id = -1
+    logged_in_user = "게스트"
+
 root = tk.Tk()
 root.title("사람이 되자")
-root.geometry("550x450")  # 배경 이미지 크기에 맞게 수정
+root.geometry("550x450")
 root.resizable(False, False)
 
-# ===== 배경 이미지 불러오기 =====
-bg_img = Image.open("./img/login_Success.png")  # 배경 이미지 경로
+# === 배경 이미지 ===
+bg_img = Image.open("./img/login_Success.png")
 bg_photo = ImageTk.PhotoImage(bg_img)
 
 canvas = tk.Canvas(root, width=bg_img.width, height=bg_img.height, highlightthickness=0)
 canvas.pack(fill="both", expand=True)
-canvas.create_image(0, 0, anchor="nw", image=bg_photo)
+canvas.create_image(0, 0, image=bg_photo, anchor="nw")
 
-# ===== 버튼 이미지 불러오기 =====
-start_btn_img = Image.open("./img/start_program_btn.png")
-start_btn_photo = ImageTk.PhotoImage(start_btn_img)
+# === 텍스트 표시 ===
+canvas.create_text(275, 80, text=f"환영합니다, {logged_in_user}님!",
+                   fill="black", font=("맑은 고딕", 14, "bold"))
 
-record_btn_img = Image.open("./img/go_to_record.png")
-record_btn_photo = ImageTk.PhotoImage(record_btn_img)
+# === 버튼 함수 ===
+def run_test():
+    subprocess.Popen(["python", "test.py", str(logged_in_id), logged_in_user])
 
-# ===== 버튼 동작 함수 =====
-def start_program():
-    root.destroy()  # 현재 창 닫기
-    subprocess.Popen(["python", "test.py"])
+def go_records():
+    subprocess.Popen(["python", "myrecords.py", str(logged_in_id), logged_in_user])
 
-def go_to_record():
-    root.destroy()  # 현재 창 닫기
-    subprocess.Popen(["python", "myrecords.py"])
+# === 버튼 이미지 (전역 참조 유지) ===
+btn1_img = ImageTk.PhotoImage(Image.open("./img/start_program_btn.png"))
+btn2_img = ImageTk.PhotoImage(Image.open("./img/go_to_record.png"))
 
-# ===== 버튼 배치 =====
-start_btn = tk.Button(root, image=start_btn_photo, command=start_program,
-                      bd=0, highlightthickness=0, relief="flat", cursor="hand2")
-start_btn_window = canvas.create_window(150, 350, anchor="nw", window=start_btn)  # 위치 조정 가능
+# === 버튼 생성 ===
+btn1 = tk.Button(root, image=btn1_img, command=run_test,
+                 bd=0, highlightthickness=0, relief="flat", cursor="hand2")
+btn2 = tk.Button(root, image=btn2_img, command=go_records,
+                 bd=0, highlightthickness=0, relief="flat", cursor="hand2")
 
-record_btn = tk.Button(root, image=record_btn_photo, command=go_to_record,
-                       bd=0, highlightthickness=0, relief="flat", cursor="hand2")
-record_btn_window = canvas.create_window(320, 350, anchor="nw", window=record_btn)  # 위치 조정 가능
+# === 버튼을 캔버스 위에 배치 ===
+canvas.create_window(275, 200, window=btn1)  # x=275, y=200 위치
+canvas.create_window(275, 270, window=btn2)  # x=275, y=270 위치
+
+# 🔑 PhotoImage 참조 유지
+root.bg_photo = bg_photo
+root.btn1_img = btn1_img
+root.btn2_img = btn2_img
 
 root.mainloop()
