@@ -90,9 +90,9 @@ def submit_action():
             success_label = tk.Label(root, text="로그인 성공!", fg="green", font=custom_font, bg="#ffffff")
             success_label.place(x=200, y=280)
 
-            # ✅ test.py 실행
+            # ✅ login_Success.py 실행
             root.destroy()  # 로그인 창 닫기
-            subprocess.Popen(["python", "test.py"])
+            subprocess.Popen(["python", "login_Success.py"])
 
         else:
             print("로그인 실패")
