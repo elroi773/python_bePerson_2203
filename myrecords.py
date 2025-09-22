@@ -1,28 +1,63 @@
 import tkinter as tk
 from PIL import Image, ImageTk
-import random
+import pymysql
 
-# 로그인된 사용자 아이디 (예시)
-logged_in_id = "kimire"
+# ===== 로그인된 사용자 아이디 전달받기 (예: sys.argv[1]) =====
+import sys
+if len(sys.argv) > 1:
+    logged_in_id = sys.argv[1]
+else:
+    logged_in_id = "guest"
 
-# 임의 점수 데이터 (최근 30일치)
-# 실제로는 DB에서 불러오도록 수정 가능
-scores = [random.randint(0, 100) for _ in range(30)]
+# ===== DB에서 점수 불러오기 =====
+def fetch_scores(userid):
+    try:
+        conn = pymysql.connect(
+            host="localhost",
+            user="root",
+            passwd="Mysql4344!",   # DB 비밀번호 맞게 수정
+            database="bePerson",
+            charset="utf8mb4"
+        )
+        cursor = conn.cursor()
 
-# 점수 → 색상 매핑 함수
+        # 최근 30일 점수 불러오기 (예시 테이블: user_scores)
+        sql = """
+            SELECT score 
+            FROM user_scores
+            WHERE userid = %s
+            ORDER BY created_at DESC
+            LIMIT 30
+        """
+        cursor.execute(sql, (userid,))
+        result = cursor.fetchall()
+
+        conn.close()
+
+        # 튜플 → 리스트 변환, 최신순이니까 reverse()
+        scores = [row[0] for row in result][::-1]
+        return scores if scores else [0]*30  # 기록 없으면 0으로 채움
+
+    except Exception as e:
+        print("DB 오류:", e)
+        return [0]*30  # DB 오류 시 기본값
+
+scores = fetch_scores(logged_in_id)
+
+# ===== 점수 → 색상 매핑 =====
 def score_to_color(score):
     if score == 0:
         return "#ebedf0"  # 회색 (기록 없음)
     elif score < 30:
-        return "#c6e48b"  # 연녹
+        return "#c6e48b"
     elif score < 60:
-        return "#7bc96f"  # 중간 녹색
+        return "#7bc96f"
     elif score < 90:
-        return "#239a3b"  # 진한 녹색
+        return "#239a3b"
     else:
-        return "#196127"  # 아주 진한 녹색
+        return "#196127"
 
-# 창 생성
+# ===== Tkinter 창 생성 =====
 root = tk.Tk()
 root.title("사람이 되자")
 
@@ -41,28 +76,19 @@ canvas.pack(fill="both", expand=True)
 # 배경 이미지 삽입
 canvas.create_image(0, 0, image=bg_photo, anchor="nw")
 
-# 아이디 표시
+# 유저 아이디 표시
 canvas.create_text(180, 160, text=logged_in_id, fill="black", 
                    font=("맑은 고딕", 14, "bold"), anchor="w")
 
-# # "오늘 점수" 표시
-# today_score = scores[-1]
-# canvas.create_text(180, 200, text=f"오늘 점수: {today_score}", fill="black", 
-#                    font=("맑은 고딕", 14, "bold"), anchor="w")
-
 # 잔디 그래프 (최근 30일)
-start_x, start_y = 150, 250   # 잔디 시작 위치
-box_size = 15                 # 네모 크기
-padding = 3                   # 네모 간격
+start_x, start_y = 150, 250
+box_size = 15
+padding = 3
 
 for i, score in enumerate(scores):
-    x = start_x + (i % 10) * (box_size + padding)   # 열
-    y = start_y + (i // 10) * (box_size + padding)  # 행
+    x = start_x + (i % 10) * (box_size + padding)
+    y = start_y + (i // 10) * (box_size + padding)
     color = score_to_color(score)
     canvas.create_rectangle(x, y, x+box_size, y+box_size, fill=color, outline="")
-
-# # 범례 표시
-# canvas.create_text(start_x, start_y - 20, text="지난 점수 기록", 
-#                    fill="black", font=("맑은 고딕", 12, "bold"), anchor="w")
 
 root.mainloop()
