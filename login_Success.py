@@ -28,6 +28,9 @@ canvas.create_image(0, 0, image=bg_photo, anchor="nw")
 canvas.create_text(275, 80, text=f"환영합니다, {logged_in_user}님!",
                    fill="black", font=("맑은 고딕", 14, "bold"))
 
+# custom_font = tkFont.Font(family="DungGeunMo", size=14)
+
+
 # === 버튼 함수 ===
 def run_test():
     subprocess.Popen(["python", "test.py", str(logged_in_id), logged_in_user])
