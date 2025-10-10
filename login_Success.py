@@ -35,7 +35,7 @@ def run_test():
 def go_records():
     subprocess.Popen(["python", "myrecords.py", str(logged_in_id), logged_in_user])
 
-# === 버튼 이미지 (전역 참조 유지) ===
+# === 버튼 이미지 ===
 btn1_img = ImageTk.PhotoImage(Image.open("./img/start_program_btn.png"))
 btn2_img = ImageTk.PhotoImage(Image.open("./img/go_to_record.png"))
 
@@ -45,9 +45,9 @@ btn1 = tk.Button(root, image=btn1_img, command=run_test,
 btn2 = tk.Button(root, image=btn2_img, command=go_records,
                  bd=0, highlightthickness=0, relief="flat", cursor="hand2")
 
-# === 버튼을 캔버스 위에 배치 ===
-canvas.create_window(275, 200, window=btn1)  # x=275, y=200 위치
-canvas.create_window(275, 270, window=btn2)  # x=275, y=270 위치
+# === 캔버스 위에 버튼 배치 ===
+canvas.create_window(275, 200, window=btn1)
+canvas.create_window(275, 270, window=btn2)
 
 # 🔑 PhotoImage 참조 유지
 root.bg_photo = bg_photo
