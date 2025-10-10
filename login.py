@@ -3,7 +3,7 @@ from tkinter import PhotoImage
 from tkinter import font as tkFont
 import pymysql
 import subprocess
-import sys  # ✅ 추가
+import sys
 
 root = tk.Tk()
 root.title("로그인 화면")
@@ -71,15 +71,17 @@ def submit_action():
             charset="utf8mb4"
         )
         cursor = conn.cursor()
-        sql = "SELECT * FROM USERS WHERE userid = %s AND userpassword = %s"
+        sql = "SELECT id, userid FROM USERS WHERE userid = %s AND userpassword = %s"
         cursor.execute(sql, (userid, userpassword))
         result = cursor.fetchone()
 
         if result:
-            print("로그인 성공:", result)
-            root.destroy()  
-            # ✅ userid를 인자로 전달
-            subprocess.Popen(["python", "login_Success.py", userid])  
+            user_id_pk, user_id_str = result  # ✅ DB에서 PK(id)와 userid 둘 다 가져오기
+            print(f"로그인 성공: id={user_id_pk}, userid={user_id_str}")
+
+            root.destroy()
+            # ✅ id(PK)와 userid 둘 다 인자로 전달
+            subprocess.Popen(["python", "login_Success.py", str(user_id_pk), user_id_str])
 
         else:
             print("로그인 실패")
