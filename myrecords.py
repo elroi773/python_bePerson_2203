@@ -37,19 +37,19 @@ def fetch_userid(user_pk):
 logged_in_user = fetch_userid(logged_in_id)
 
 # ===== 최근 30일 점수 불러오기 =====
-def fetch_scores(userid):
+def fetch_scores(user_pk):
     try:
         conn = pymysql.connect(**DB_CONFIG)
         cursor = conn.cursor()
 
         sql = """
             SELECT score 
-            FROM user_scores
-            WHERE userid = %s
+            FROM RECORDS
+            WHERE user_id = %s
             ORDER BY created_at DESC
             LIMIT 30
         """
-        cursor.execute(sql, (userid,))
+        cursor.execute(sql, (user_pk,))
         result = cursor.fetchall()
         conn.close()
 
@@ -60,7 +60,7 @@ def fetch_scores(userid):
         print("DB 오류 (점수 조회):", e)
         return [0] * 30
 
-scores = fetch_scores(logged_in_user)
+scores = fetch_scores(logged_in_id)
 
 # ===== 점수 → 색상 매핑 =====
 def score_to_color(score):
@@ -102,11 +102,32 @@ start_x, start_y = 150, 250
 box_size = 15
 padding = 3
 
+# 툴팁(Label) 생성
+tooltip = tk.Label(root, text="", bg="#333", fg="white",
+                   font=("DungGeunMo", 11), bd=0, padx=5, pady=2)
+tooltip.place_forget()  # 처음에는 숨김
+
+# Hover 이벤트 함수
+def show_tooltip(event, score):
+    tooltip.config(text=f"점수: {score}")
+    tooltip.place(x=event.x_root - root.winfo_rootx() + 15,
+                  y=event.y_root - root.winfo_rooty() - 10)
+
+def hide_tooltip(event):
+    tooltip.place_forget()
+
+# 잔디 그리기 + hover 이벤트 바인딩
 for i, score in enumerate(scores):
     x = start_x + (i % 10) * (box_size + padding)
     y = start_y + (i // 10) * (box_size + padding)
     color = score_to_color(score)
-    canvas.create_rectangle(x, y, x + box_size, y + box_size, fill=color, outline="")
+
+    rect = canvas.create_rectangle(x, y, x + box_size, y + box_size,
+                                   fill=color, outline="")
+
+    # Hover 이벤트 등록
+    canvas.tag_bind(rect, "<Enter>", lambda e, s=score: show_tooltip(e, s))
+    canvas.tag_bind(rect, "<Leave>", hide_tooltip)
 
 # 🔑 이미지 참조 유지
 root.bg_photo = bg_photo
