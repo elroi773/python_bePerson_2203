@@ -33,10 +33,13 @@ canvas.create_text(275, 80, text=f"환영합니다, {logged_in_user}님!",
 
 # === 버튼 함수 ===
 def run_test():
+    root.destroy()  # 현재 창 닫기
     subprocess.Popen(["python", "test.py", str(logged_in_id), logged_in_user])
 
 def go_records():
+    root.destroy()  # 현재 창 닫기
     subprocess.Popen(["python", "myrecords.py", str(logged_in_id), logged_in_user])
+
 
 # === 버튼 이미지 ===
 btn1_img = ImageTk.PhotoImage(Image.open("./img/start_program_btn.png"))
