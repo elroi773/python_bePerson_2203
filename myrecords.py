@@ -64,7 +64,7 @@ scores = fetch_scores(logged_in_id)
 # ===== 점수 → 색상 매핑 =====
 def score_to_color(score):
     if score == 0:
-        return "#ebedf0"
+        return "#ebedf0"  # 회색 (기록 없음)
     elif score < 30:
         return "#c6e48b"
     elif score < 60:
@@ -114,6 +114,7 @@ def show_tooltip(event, score):
 def hide_tooltip(event):
     tooltip.place_forget()
 
+# ===== 잔디 사각형 그리기 =====
 for i, score in enumerate(scores):
     x = start_x + (i % 10) * (box_size + padding)
     y = start_y + (i // 10) * (box_size + padding)
@@ -167,16 +168,17 @@ def show_reasons():
     text_box = tk.Text(frame, wrap="word", font=("DungGeunMo", 12))
     text_box.pack(fill="both", expand=True)
     text_box.insert("1.0", "\n\n".join(reasons))
-    text_box.config(state="disabled")  # 읽기 전용
+    text_box.config(state="disabled")
 
     tk.Button(popup, text="닫기", command=popup.destroy,
               font=("DungGeunMo", 12)).pack(pady=10)
 
-# ===== 버튼 추가 =====
+# ===== 버튼 (잔디 밑에 배치) =====
+reason_button_y = start_y + (3 * (box_size + padding)) + 40  # 잔디 밑 + 여백
 reason_button = tk.Button(root, text="사유 보기", command=show_reasons,
                           font=("DungGeunMo", 13),
                           bg="#4CAF50", fg="white", relief="flat", padx=10, pady=5)
-reason_button_window = canvas.create_window(550, 160, anchor="w", window=reason_button)
+reason_button_window = canvas.create_window(start_x, reason_button_y, anchor="w", window=reason_button)
 
 # 🔑 이미지 참조 유지
 root.bg_photo = bg_photo
