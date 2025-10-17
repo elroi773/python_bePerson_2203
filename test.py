@@ -216,7 +216,8 @@ def process_frame():
 
     root.after(30, process_frame)
 
-# ===================== 시작 알림 (notice.png) =====================
+
+#========== 시작 알림 notice.png ========
 def show_notice():
     notice_win = tk.Toplevel(root)
     notice_win.title("Notice")
@@ -247,6 +248,8 @@ def show_notice():
 
     notice_win.after(3000, close_and_start)
 
-# ===================== 실행 =====================
+
+# ===================== 시작 =====================
 show_notice()
+root.after(0, process_frame)
 root.mainloop()
