@@ -1,6 +1,19 @@
 import tkinter as tk
 from PIL import Image, ImageTk
 import subprocess
+import os, sys
+
+
+def resource_path(relative_path):
+    """PyInstaller 환경에서도 리소스 경로를 올바르게 찾기"""
+    try:
+        # PyInstaller로 패키징된 경우, 임시폴더(_MEIPASS)를 base_path로 사용
+        base_path = sys._MEIPASS
+    except Exception:
+        # 개발 중(py로 실행 중)일 때는 현재 작업 디렉터리를 base_path로 사용
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 
 # 창 생성
 root = tk.Tk()
