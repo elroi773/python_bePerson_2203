@@ -3,14 +3,12 @@ from PIL import Image, ImageTk
 import subprocess
 import os, sys
 
-
+# ✅ exe 환경에서도 안전하게 경로를 불러오는 함수
 def resource_path(relative_path):
     """PyInstaller 환경에서도 리소스 경로를 올바르게 찾기"""
     try:
-        # PyInstaller로 패키징된 경우, 임시폴더(_MEIPASS)를 base_path로 사용
-        base_path = sys._MEIPASS
+        base_path = sys._MEIPASS  # PyInstaller 임시 폴더
     except Exception:
-        # 개발 중(py로 실행 중)일 때는 현재 작업 디렉터리를 base_path로 사용
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
@@ -18,41 +16,38 @@ def resource_path(relative_path):
 # 창 생성
 root = tk.Tk()
 root.title("사람이 되자")
-root.geometry("550x450")  # 배경 이미지 크기에 맞게 수정하세요
+root.geometry("550x450")
 root.resizable(False, False)
 
-# 배경 이미지 불러오기
-bg_img = Image.open("./img/index_background.png")  # 배경 이미지 경로
+# ✅ 배경 이미지 불러오기 (resource_path 적용)
+bg_img = Image.open(resource_path("img/index_background.png"))
 bg_photo = ImageTk.PhotoImage(bg_img)
 
 canvas = tk.Canvas(root, width=bg_img.width, height=bg_img.height)
 canvas.pack(fill="both", expand=True)
 canvas.create_image(0, 0, image=bg_photo, anchor="nw")
 
-# 버튼 클릭 시 실행 함수
+# ✅ 버튼 클릭 시 다른 exe 실행하도록 수정
 def open_login():
-    subprocess.Popen(["python", "login.py"])
+    subprocess.Popen([sys.executable, resource_path("login.py")])  # Python 실행기 기준으로 실행
     root.destroy()
 
 def open_join():
-    subprocess.Popen(["python", "join.py"])
+    subprocess.Popen([sys.executable, resource_path("join.py")])
     root.destroy()
 
-# 버튼 이미지 불러오기
-btn_login_img = ImageTk.PhotoImage(Image.open("./img/login.png"))   # 로그인 버튼 이미지
-btn_join_img = ImageTk.PhotoImage(Image.open("./img/join.png"))     # 회원가입 버튼 이미지
-btn_title_img = ImageTk.PhotoImage(Image.open("./img/title.png"))   # 사람이 되자 버튼 이미지
+# ✅ 버튼 이미지들도 resource_path 적용
+btn_login_img = ImageTk.PhotoImage(Image.open(resource_path("img/login.png")))
+btn_join_img = ImageTk.PhotoImage(Image.open(resource_path("img/join.png")))
+btn_title_img = ImageTk.PhotoImage(Image.open(resource_path("img/title.png")))
 
-# 버튼 배치 (좌표는 이미지 위치에 맞게 수정)
+# 버튼 배치
 canvas.create_image(270, 200, image=btn_title_img, anchor="center")
 
-# 버튼 먼저 생성
 login_btn = tk.Button(root, image=btn_login_img, command=open_login, borderwidth=0, highlightthickness=0)
 join_btn = tk.Button(root, image=btn_join_img, command=open_join, borderwidth=0, highlightthickness=0)
 
-# 버튼을 캔버스 위에 배치
-login_window = canvas.create_window(200, 300, anchor="center", window=login_btn)   # 로그인 버튼 (왼쪽)
-join_window = canvas.create_window(340, 300, anchor="center", window=join_btn)    # 회원가입 버튼 (오른쪽)
-
+canvas.create_window(200, 300, anchor="center", window=login_btn)
+canvas.create_window(340, 300, anchor="center", window=join_btn)
 
 root.mainloop()
