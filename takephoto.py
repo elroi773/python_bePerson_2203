@@ -4,6 +4,17 @@ import cv2
 import os
 from PIL import Image, ImageTk
 from db import connect_db
+import subprocess
+import sys   # ✔ user id 받기
+
+# =========================
+# ✔ join.py 에서 전달한 userid 가져오기
+# =========================
+if len(sys.argv) > 1:
+    USER_ID = sys.argv[1]
+else:
+    USER_ID = "testuser"
+print(f"📌 takephoto.py 실행됨 / USER_ID = {USER_ID}")
 
 root = tk.Tk()
 root.title("정자세 사진 찍기")
@@ -23,17 +34,16 @@ face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_fronta
 # 전역 변수
 captured_frame = None
 detected_faces = []
-detected_neck_length = 0  # 목 길이 저장
+detected_neck_length = 0
 
-# 프레임을 담을 Frame (중앙 정렬)
+# 프레임 컨테이너
 frame_container = tk.Frame(root, bg="white")
 frame_container.place(relx=0.5, rely=0.4, anchor="center")
 
-# Tkinter에 영상 표시용 라벨
 video_label = tk.Label(frame_container, bg="black")
 video_label.pack()
 
-# 웹캠 객체
+# 웹캠
 cam = cv2.VideoCapture(0)
 cam.set(3, 400)
 cam.set(4, 350)
@@ -50,41 +60,29 @@ def update_frame():
     gray = cv2.equalizeHist(gray)
 
     faces = face_cascade.detectMultiScale(
-        gray,
-        scaleFactor=1.05,
-        minNeighbors=8,
-        minSize=(70, 70)
+        gray, scaleFactor=1.05, minNeighbors=8, minSize=(70, 70)
     )
     detected_faces = faces
 
     for (x, y, w, h) in faces:
-        # 얼굴 박스
         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 3)
 
-        # 목 길이 추정
         neck_length = int(h * 0.35)
         detected_neck_length = neck_length
 
-        # 목 영역 박스
         y_neck_start = y + h
         y_neck_end = min(y + h + neck_length, frame.shape[0])
-        cv2.rectangle(frame, (x, y_neck_start), (x + w, y_neck_end), (255, 0, 0), 2)
 
-        # 목 길이 텍스트
+        cv2.rectangle(frame, (x, y_neck_start), (x + w, y_neck_end), (255, 0, 0), 2)
         cv2.putText(frame, f"Neck: {neck_length}px", (x, y_neck_end + 20),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
 
     captured_frame = frame.copy()
 
-    # OpenCV -> PIL 변환
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     img = Image.fromarray(rgb)
 
-    # 👉 크기를 80%로 축소
-    new_w = int(img.width * 0.8)
-    new_h = int(img.height * 0.8)
-    img = img.resize((new_w, new_h))
-
+    img = img.resize((int(img.width * 0.8), int(img.height * 0.8)))
     imgtk = ImageTk.PhotoImage(image=img)
 
     video_label.imgtk = imgtk
@@ -92,7 +90,8 @@ def update_frame():
 
     root.after(10, update_frame)
 
-def take_photo(userid="testuser"):
+
+def take_photo(userid):
     global captured_frame, detected_faces, detected_neck_length
 
     if captured_frame is None or len(detected_faces) == 0:
@@ -110,35 +109,36 @@ def take_photo(userid="testuser"):
 
     os.makedirs("./photos", exist_ok=True)
     photo_path = f"./photos/{userid}_photo.jpg"
-    cv2.imwrite(photo_path, cv2.cvtColor(roi, cv2.COLOR_RGB2BGR))
-    print(f"📸 사진 저장 완료: {photo_path} (목 길이: {neck_length}px)")
+    cv2.imwrite(photo_path, roi)
 
-    save_photo_to_db(userid, photo_path, neck_length)
+    print(f"📸 저장 완료: {photo_path} (neck={neck_length}px)")
+
+    # DB 업데이트
+    if save_photo_to_db(userid, photo_path, neck_length):
+        print("➡ index.py 실행합니다...")
+        root.destroy()
+        subprocess.Popen(["python", "index.py"])
+    else:
+        print("⚠ DB 저장 실패")
+
 
 def save_photo_to_db(userid, photo_path, neck_length):
     try:
         conn = connect_db()
         cursor = conn.cursor()
-
-        sql = "UPDATE users SET photo_url = %s, neck_length = %s WHERE userid = %s"
+        sql = "UPDATE users SET photo_url=%s, neck_length=%s WHERE userid=%s"
         cursor.execute(sql, (photo_path, neck_length, userid))
         conn.commit()
-
-        print(f"✅ DB 업데이트 완료 (userid={userid}, 목 길이={neck_length}px)")
+        conn.close()
+        return True
     except Exception as e:
         print("DB 오류:", e)
-    finally:
-        if conn:
-            conn.close()
+        return False
 
-# 버튼 추가 (화면 아래 중앙)
-btn = tk.Button(root, text="사진 촬영", font=custom_font, command=lambda: take_photo("testuser"))
+# 버튼
+btn = tk.Button(root, text="사진 촬영", font=custom_font, command=lambda: take_photo(USER_ID))
 btn.place(relx=0.5, rely=0.9, anchor="center")
 
-# 프레임 업데이트 시작
 update_frame()
-
 root.mainloop()
-
-# 종료 시 카메라 해제
 cam.release()
