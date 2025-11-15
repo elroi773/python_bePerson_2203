@@ -6,6 +6,7 @@ import pymysql
 from datetime import datetime, timedelta
 import threading
 import keyboard
+import os
 
 # ===================== DB 설정 =====================
 DB_HOST = "localhost"
@@ -28,14 +29,11 @@ KNOWN_DISTANCE = 50.0
 focal_length = None
 initialized = False
 
-# 경고 이미지
-warning_img = cv2.imread("./img/Warning.png")
-
-# ===================== Tkinter 창 =====================
+# ===================== Tkinter 루트 창 (Warning) =====================
 root = tk.Tk()
 root.title("Warning")
 root.attributes("-topmost", True)
-root.withdraw()
+root.withdraw()          # 기본은 숨겨두고, 거북목일 때 deiconify
 root.resizable(False, False)
 
 win_w, win_h = 400, 250
@@ -45,12 +43,32 @@ pos_x = (screen_w - win_w) // 2
 pos_y = (screen_h - win_h) // 2
 root.geometry(f"{win_w}x{win_h}+{pos_x}+{pos_y}")
 
-# OpenCV → PIL
-img_rgb = cv2.cvtColor(warning_img, cv2.COLOR_BGR2RGB)
-img_pil = Image.fromarray(img_rgb).resize((win_w, win_h - 50))
-img_tk = ImageTk.PhotoImage(img_pil)
-label = tk.Label(root, image=img_tk)
-label.pack()
+# ===================== Warning 이미지 로드 =====================
+# 스크립트 기준 경로로 안전하게 읽기
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+warning_path = os.path.join(BASE_DIR, "img", "Warning.png")
+
+if not os.path.exists(warning_path):
+    print("❌ Warning 이미지 파일을 찾을 수 없습니다:", warning_path)
+    warning_img_pil = None
+else:
+    warning_img_pil = Image.open(warning_path)
+    print("✅ Warning 이미지 로드 성공:", warning_path)
+
+# 이미지 라벨 + 버튼을 담을 프레임
+content_frame = tk.Frame(root, bg="white")
+content_frame.pack(fill="both", expand=True)
+
+# Warning 이미지 라벨
+if warning_img_pil is not None:
+    resized = warning_img_pil.resize((win_w, win_h - 50), Image.LANCZOS)
+    img_tk = ImageTk.PhotoImage(resized)
+    img_label = tk.Label(content_frame, image=img_tk, bg="white")
+    img_label.image = img_tk  # ✅ GC 방지
+    img_label.pack(side="top", fill="x")
+else:
+    img_label = tk.Label(content_frame, text="Warning 이미지 로드 실패", bg="white", fg="red")
+    img_label.pack(side="top", fill="both", expand=True)
 
 # ===================== 버튼 기능 =====================
 pause_until = None  # 사유 입력 후 10분 일시정지
@@ -92,11 +110,13 @@ def reason_warning():
 
     tk.Button(reason_win, text="제출", command=submit_reason, font=("Arial", 12)).pack(pady=10)
 
-# 버튼 프레임
-btn_frame = tk.Frame(root)
-btn_frame.pack(pady=5)
+# 버튼 프레임 (이미지 아래)
+btn_frame = tk.Frame(content_frame, bg="white")
+btn_frame.pack(side="bottom", pady=5)
+
 btn_ok = tk.Button(btn_frame, text="확인", command=close_warning, font=("Arial", 14))
 btn_ok.pack(side="left", padx=10)
+
 btn_reason = tk.Button(btn_frame, text="사유", command=reason_warning, font=("Arial", 14))
 btn_reason.pack(side="left", padx=10)
 
@@ -144,14 +164,11 @@ def end_program():
     cv2.destroyAllWindows()
     root.destroy()
 
-# 별도 스레드에서 단축키 감지
+# ===================== 단축키 스레드 =====================
 def listen_hotkey():
-    # Ctrl + Shift + E 단축키 등록
     keyboard.add_hotkey('ctrl+shift+e', end_program)
-    # 스레드가 살아있도록 대기
     keyboard.wait()
 
-# 스레드 시작
 threading.Thread(target=listen_hotkey, daemon=True).start()
 
 # ===================== 얼굴/목 기준 =====================
@@ -192,7 +209,6 @@ def process_frame():
                 print(f"현재 거리: {distance:.2f}cm / 얼굴 높이: {face_height}px")
 
                 if distance <= 30 or face_height <= NECK_THRESHOLD:
-                    # 점수 차감 (새 경고 발생 시점)
                     if not showing:
                         final_score -= 5
                         if final_score < 0:
@@ -203,11 +219,13 @@ def process_frame():
     now = datetime.now()
     if not paused:
         if show_warning and not showing:
+            print("➡ Warning 창 표시")
             root.deiconify()
             showing = True
             last_show_time = now
         elif not show_warning and showing:
             if last_show_time and (now - last_show_time).total_seconds() >= 5:
+                print("➡ Warning 창 숨김")
                 root.withdraw()
                 showing = False
     else:
@@ -216,30 +234,33 @@ def process_frame():
 
     root.after(30, process_frame)
 
-
 #========== 시작 알림 notice.png ========
 def show_notice():
     notice_win = tk.Toplevel(root)
     notice_win.title("Notice")
-    notice_win.geometry("400x250")
     notice_win.resizable(False, False)
 
     # 화면 중앙 배치
+    n_w, n_h = 400, 250
     screen_w = root.winfo_screenwidth()
     screen_h = root.winfo_screenheight()
-    pos_x = (screen_w - 400) // 2
-    pos_y = (screen_h - 250) // 2
-    notice_win.geometry(f"400x250+{pos_x}+{pos_y}")
+    pos_x = (screen_w - n_w) // 2
+    pos_y = (screen_h - n_h) // 2
+    notice_win.geometry(f"{n_w}x{n_h}+{pos_x}+{pos_y}")
 
-    # 이미지 불러오기
-    notice_img = cv2.imread("./img/notice.png")
-    img_rgb = cv2.cvtColor(notice_img, cv2.COLOR_BGR2RGB)
-    img_pil = Image.fromarray(img_rgb).resize((400, 250))
-    img_tk = ImageTk.PhotoImage(img_pil)
-
-    label = tk.Label(notice_win, image=img_tk)
-    label.image = img_tk  # 가비지 컬렉션 방지
-    label.pack()
+    # notice 이미지 로드
+    notice_path = os.path.join(BASE_DIR, "img", "notice.png")
+    if os.path.exists(notice_path):
+        notice_img_pil = Image.open(notice_path).resize((n_w, n_h), Image.LANCZOS)
+        img_tk = ImageTk.PhotoImage(notice_img_pil)
+        label = tk.Label(notice_win, image=img_tk)
+        label.image = img_tk
+        label.pack()
+        print("✅ notice 이미지 로드 성공:", notice_path)
+    else:
+        label = tk.Label(notice_win, text="notice.png 를 찾을 수 없습니다", fg="red")
+        label.pack(expand=True, fill="both")
+        print("❌ notice 이미지 없음:", notice_path)
 
     # 3초 후 창 닫고 process_frame 시작
     def close_and_start():
@@ -248,8 +269,6 @@ def show_notice():
 
     notice_win.after(3000, close_and_start)
 
-
 # ===================== 시작 =====================
 show_notice()
-root.after(0, process_frame)
 root.mainloop()
